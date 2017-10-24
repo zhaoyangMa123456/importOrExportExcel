@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link href="css/main.css" rel="stylesheet">
+</head>
+<body>
+<div class="ma-form">
+    <label for="company-login-zhizhao" class="btn btn-primary fl ma-btn-lab">选择</label>
+    <input name="" id="viewfile" value="请选择上传文件" disabled="disabled" class=" file-ma-input inputstyle" type="text">
+    <input name="yyzz" id="company-login-zhizhao" onchange="document.getElementById('viewfile').value=this.value;" type="file">
+    <input id="upload" class="btn btn-primary btn-block" type="submit">
+</div>
+<script src="libs/jquery/jq1.11.3.js"></script>
+<script src="libs/jsxlsx/xlsx.core.min.js"></script>
+<script>
+    $(function () {
+
+        $('#upload').click(function()
+        {
+
+            if (!$('#company-login-zhizhao')[0].files.length) {
+                alert('请选择数据文件');
+
+            } else {
+                var wb;//读取完成的数据
+                var rABS = false; //是否将文件读取为二进制字符串
+                var fileObj = document.getElementById('company-login-zhizhao');
+                var resJson ;
+                importf(fileObj);
+
+                function importf(obj) {//导入
+                    if(!obj.files) {
+                        return;
+                    }
+                    var f = obj.files[0];
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        var data = e.target.result;
+                        if(rABS) {
+                            wb = XLSX.read(btoa(fixdata(data)), {//手动转化
+                                type: 'base64'
+                            });
+                        } else {
+                            wb = XLSX.read(data, {
+                                type: 'binary'
+                            });
+                        }
+
+                        resJson= XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]) ;
+                        var finalArr = [];
+                        for(var i=0;i<resJson.length;i++){
+                            var objs = {
+                                partner_id:resJson[i]['用户号'],
+                                external_orderid:resJson[i]['飞蚂蚁单号'],
+                                orderid:'',
+                                provider_id:resJson[i]['快递公司'],
+                                postname:resJson[i]['寄_姓名'],
+                                postmobileno:resJson[i]['寄_手机号'],
+                                postprov:resJson[i]['寄_省'],
+                                postcity:resJson[i]['寄_市'],
+                                postcounty:resJson[i]['寄_区'],
+                                poststreet:resJson[i]['寄_街道'],
+                                postdetail:resJson[i]['寄_详细地址'],
+                                goodsWeight:'0',
+                                shipmenttype:"普货",
+                                remark:'订单开单加单找收货人'
+                            };
+                            finalArr.push(objs)
+                        }
+
+                        /**********
+                         * 开始call
+                         */
+                        console.log(finalArr)
+                        toCall(finalArr)
+
+
+                    };
+                    if(rABS) {
+                        reader.readAsArrayBuffer(f);
+                    } else {
+                        reader.readAsBinaryString(f);
+                    }
+                }
+
+                function fixdata(data) { //文件流转BinaryString
+                    var o = "",
+                        l = 0,
+                        w = 10240;
+                    for(; l < data.byteLength / w; ++l) o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w, l * w + w)));
+                    o += String.fromCharCode.apply(null, new Uint8Array(data.slice(l * w)));
+                    return o;
+                }
+            }
+
+
+
+        })
+
+    })
+
+
+
+
+    /***********
+     * 发送订单
+     * @param obj
+     */
+    function toCall(finalArr) {
+        $.ajax({
+            url:'http://mazhaoyang.cn/index.php/Home/Output/RedpocketAjaxList.html',         //验证登录信息
+            data:{param:finalArr},
+            type:'post',
+            dataType:"json",
+            success: function(data){
+                console.log(data)
+
+            },
+            error:function (err) {
+                console.log(err)
+                return false;
+            }
+        })
+    }
+
+</script>
+</body>
+</html>
